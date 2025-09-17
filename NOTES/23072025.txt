@@ -1,0 +1,103 @@
+23/07/2025
+
+post: http://localhost:8080/auth/login
+admin 
+{
+  "email": "reena@gmail.com",
+  "password": "password"
+}
+
+customer
+{
+  "email": "sai@gmail.com",
+  "password": "1234"
+}
+register
+{
+  "name": "Sai",
+  "email": "sai@gmail.com",
+  "password": "1234",
+  "phone": "8877543210",
+  "role": "CUSTOMER"
+}
+
+------------------------------------------------
+2.user
+get http://localhost:8080/users
+get http://localhost:8080/users/id
+
+
+post  http://localhost:8080/users
+{
+  "name": "Rai",
+  "email": "rai@gmail.com",
+  "mobile": "8877543210"
+}
+-------------------------------------------
+GET: http://localhost:8080/plans
+
+GET: http://localhost:8080/plans/{id}--EXPH
+
+PUT: http://localhost:8080/plans/{id}
+DELETE: http://localhost:8080/plans/{id}
+
+post http://localhost:8080/plans
+{
+  "planName": "JioHostarMobile",
+  "price": 195.0,
+  "validityInDays":90,
+  "dataLimit": "1.5GB/day",
+  "talktime" : "100 mins",
+  "description":"Subcription worth Rs 149."
+}
+-----------------------------------------------------
+POST http://localhost:8080/recharges
+{
+    "userId":1,
+    "planId":1
+}
+GET http://localhost:8080/recharges/{id}
+GET http://localhost:8080/recharges/user/{userId}
+GEt http://localhost:8080/recharges/plan/{planId}
+
+get : http://localhost:8080/recharges/recharges?role=CUSTOMER
+get http://localhost:8080/recharges/recharges?role=ADMIN
+------------------------------------------------------------------
+POST:http://localhost:9005/usages
+{
+  "userId": 1,
+  "planId": 2,
+  "callMinutes": 100,
+  "dataUsageInGB": 1.5,
+  "smsCount": 15
+}
+GET:http://localhost:8080/usages/user/1
+------------------------------------------------------------------
+7.billing-service 9006
+ADMIN only
+POST:http://localhost:8080/billing/generate/1
+no body
+
+2. Get Billing History (Admin or Customer)
+GET:http://localhost:8080/billing/history?userId=1
+token
+
+3.get bill
+GET http://localhost:8080/billing/{billId}
+
+4. List All Bills (Admin Only)
+URL:
+GET http://localhost:8080/billing/all
+
+5. Delete a Bill (Admin Only)
+URL:
+DELETE http://localhost:8080/billing/{billId}
+Example:
+http://localhost:8080/billing/10
+
+
+
+
+
+
+

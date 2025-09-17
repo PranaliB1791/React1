@@ -1,0 +1,21 @@
+day 31:
+Frontend
+node --version
+npm --version
+npm install create-react-app
+npx create-react-app employee-management
+
+employee-management
+
+vs code
+node modules
+public 
+index.htnl
+src
+index.js
+
+
+cmd
+cd employeemanagement
+code.
+npm start

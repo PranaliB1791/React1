@@ -1,0 +1,115 @@
+Problem Statement:
+
+
+Design and implement a microservices-based Telecom Services application using Spring Boot.
+
+The system should use Eureka Server for service discovery and an API Gateway (Spring Cloud Gateway) for routing. The application should include at least three microservices: Customer Service, Plan Service, and Recharge Service. Each service should register itself with the Eureka Server and be accessed through the API Gateway."
+
+Project Requirements:
+Eureka Server
+Acts as a service registry.
+All services must register themselves with Eureka.
+
+API Gateway
+Routes incoming requests to appropriate microservices.
+Should include basic logging and error handling.
+Optional: Add a simple filter for logging or authentication.
+
+Customer Service
+CRUD operations for customer profiles (name, mobile number, email, etc.).
+Sample endpoints: /customers, /customers/{id}
+
+Plan Service
+Stores telecom recharge plans (data plans, talktime, validity).
+Sample endpoints: /plans, /plans/{id}
+
+Recharge Service
+Allows a customer to recharge with a selected plan.
+Should interact with both Customer and Plan services.
+Sample endpoints: /recharges, /recharges/{customerId}
+------------------------------------------------------------------------
+Eserver 8067
+gateway 8080
+customer service 9001
+plan service 9002
+recharge serive 9003
+-----------------------------------------------------------------------
+
+                 +-----------------------+
+                 |     Eureka Server     |
+                 |       (8067)          |
+                 +-----------+-----------+
+                             |
+                Registers all services
+                             |
+                             v
+                 +-----------------------+
+                 |     API Gateway       |
+                 |       (8080)          |
+                 +-----------+-----------+
+                             |
+    Routes Request to the Correct Service
+                             |
+        +--------------------+--------------------+
+        |                    |                    |
+        v                    v                    v
++----------------+   +----------------+   +----------------+
+| Customer       |   | Plan           |   | Recharge        |
+| Service (9001) |   | Service (9002) |   | Service (9003)  |
++----------------+   +----------------+   +----------------+
+|  PostgreSQL DB |   |  PostgreSQL DB |   |  PostgreSQL DB  |
+|  customerdb   |   |  plandb       |   |  rechargdb    |
++----------------+   +----------------+   +----------------+
+-----------------------------------------------------------------------
+Recharge Service consumes:
+-> Customer Service to validate customer
+-> Plan Service to get plan details
+
+Each service uses its own database.
+
+
+
+customer service:
+Post: http://localhost:8080/customers
+JSON
+{
+  "name": "Sonali",
+  "mobileNumber": "7777777777",
+  "email": "sonali@gmail.com"
+}
+
+URL:
+GET: http://localhost:8080/customers
+GET: http://localhost:8080/customers/{id}
+PUT: http://localhost:8080/customers/{id}
+JSON
+
+DELETE: http://localhost:8080/customers/{id}
+--------------------------------------------------------------------------------
+Post: http://localhost:8080/pans
+JSON
+{
+  "planName": "Basic 1GB",
+  "data": "1GB",
+  "talktime": "100 mins",
+  "validity": "30 days"
+}
+
+GET http://localhost:8080/plans
+GET http://localhost:8080/plans/id
+PUT GET http://localhost:8080/plans/id
+JSON
+
+DELETE http://localhost:8080/plans/id
+=====================================================
+recharge:
+list of all recharge
+GET http://localhost:8080/recharges
+GET http://localhost:8080/recharges
+GET http://localhost:8080/recharges/customer/11(CID)
+POST http://localhost:8080/recharges?customerId=1&planId=1
+http://localhost:8080/recharges?customerId=4&planId=2
+
+
+
+

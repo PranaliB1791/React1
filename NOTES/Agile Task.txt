@@ -1,0 +1,29 @@
+Agile Task:
+Agile Methodology – Suitable Example
+
+Project: Developing a mobile app for a food delivery startup.
+Why Agile is Beneficial:
+Requirements may change based on user feedback.
+The product needs to go to market quickly with a basic version (MVP).
+
+Frequent updates and new features are expected (like live tracking, payment integration).
+
+Agile allows for flexibility, fast delivery, and continuous improvement.
+* In Agile, the team can deliver a basic working app in a few sprints and keep improving it based on customer feedback.
+------------------------------------------------------
+
+❌ Agile Methodology – Not Suitable Example
+Project: Building a safety-critical system for an aircraft navigation control system.
+
+Why Agile is Not Suitable:
+
+The project requires complete, upfront requirements and formal documentation.
+
+Changes are costly and can risk safety and compliance.
+
+Strict regulations and certifications must be followed.
+
+Testing and validation need to be exhaustive before release.
+
+🔴 In this case, the Waterfall model is better because of its structured approach and emphasis on documentation, validation, and traceability.
+-----------------------------------------------------------------------

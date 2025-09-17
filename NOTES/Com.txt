@@ -1,0 +1,41 @@
+Com
+| Component                 | Description                                                  |
+| ------------------------- | ------------------------------------------------------------ |
+| **Java 17**               | Base programming language                                    |
+| **Spring Boot 3.x**       | Framework to build microservices                             |
+| **Spring Security + JWT** | Authentication and Authorization for secure APIs             |
+| **Spring Cloud Eureka**   | Service Discovery (registers all services)                   |
+| **Spring Cloud Gateway**  | API Gateway that routes requests and handles JWT auth        |
+| **PostgreSQL**            | Relational database for structured data (users, plans, etc.) |
+| **MongoDB**               | NoSQL DB for unstructured logs like usage                    |
+| **ModelMapper**           | DTO ↔ Entity conversions                                     |
+| **Maven**                 | Dependency and build management                              |
+| **Docker (Optional)**     | Containerization                                             |
+| **Jenkins (Optional)**    | CI/CD pipeline                                               |
+
+------------------------------------------
+ Auth Service
+Purpose:
+Handles user registration and login using JWT-based authentication.
+Register new users
+Login and receive a JWT token
+Password encoding
+
+User service:
+Manage user profiles and customer-related information.
+Features:
+CRUD operations on customer data
+Each user linked to their plan and recharges
+
+plan service:
+Admins can create, update, delete plans
+Customers can view all available plans
+Each plan has attributes like name, price, validity, data limit, etc.
+
+recharge service:
+Handles customer recharges and links them to selected plans.
+ Features:
+A customer can recharge by selecting a plan
+Stores recharge info with user and plan ID
+Validates user and plan via RestTemplate (with LoadBalanced)
+Stores recharge date

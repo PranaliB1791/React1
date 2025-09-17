@@ -1,0 +1,71 @@
+React:
+11/08/25
+
+1.open cmd and type:
+npm create vite@latest my-react-app -- --template react
+
+This will create a folder called my-react-app with all the React setup done for you.
+
+2. Go inside the folder:
+cd my-react-app
+
+3. Install dependencies:
+npm install
+
+4. Start the app:
+npm run dev
+🟢 This will start your React app at http://localhost:5173
+-------------------------------------------------------------------------------
+
+* React Components
+React is all about components — reusable pieces of UI.
+Let’s walk through the most basic kind of React component: a function component.
+
+ Open this file in your project:
+my-react-app/src/App.jsx
+
+You should see something like this:
+-----------------------------------------
+function App() {
+  return (
+    <div>
+      <h1>Vite + React</h1>
+      <p>Hello React Beginner! 🚀</p>
+    </div>
+  );
+}
+
+export default App;
+-----------------------------------------
+
+ Challenge: Create Your Own Component
+
+Now let’s create your own component in a new file:
+
+🔹 1. Create a new file called Welcome.jsx inside src/
+// src/Welcome.jsx
+function Welcome() {
+  return <h2>Hello from the Welcome component! 🎉</h2>;
+}
+
+export default Welcome;
+------------------------------------
+ 2. Use this in App.jsx
+import Welcome from './Welcome';
+
+function App() {
+  return (
+    <div>
+      <h1>👋 Welcome to My First React App</h1>
+      <Welcome />
+    </div>
+  );
+}
+
+export default App;
+✅ You should see both headings on the page!
+--------------------------------------------------------------------
+Step 4: Understanding Props in React
+Props (short for properties) let you pass data from one component to another.
+
+Think of props like parameters in a function.

@@ -1,0 +1,58 @@
+Day 1:
+28/07/2025
+NSA
+
+NSA: North Star Architecture
+BAU: business As Usual 
+SOE System of Engagement
+SOR : ---Records
+SOI : ---insights
+
+NSA clients:
+1] Assisted: customer -> visit store->Sales Rep
+components/channels:
+OMNI-Retail/TAB:
+OMNI- Indirect/TAB
+OMNI-Telesales
+OMNI-care
+CHAT-Store
+
+2] Digital: Customer:: login app/website
+VZW-DOTCOM
+VZW-MVA
+VZW-MVO
+VZW-MFA
+
+CONNECTION: wireless 100%  and wireline->migration is going
+
+A]interfaces
+1.Human to Human
+- Retail 
+- center
+- Chat
+2.Human to Machine
+- Online
+- Apps
+- IVR
+- Social
+- Chat Bot 
+- Smart Assistant 
+
+3.Machine to Machine
+- Car
+- Home/City
+- Devices
+- Partners
+
+B]System of Engagement
+C]Customer Experience Platform
+D] System of Record
+-------------------------------------------------------------------
+
+
+
+ 
+
+
+
+

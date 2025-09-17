@@ -1,0 +1,1327 @@
+Final Mini project 
+
+package com.api;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+public class ApigatewayApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(ApigatewayApplication.class, args);
+    }
+}
+------------------------------------------------------
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.1.2</version> <!-- ✅ Compatible with Spring Cloud 2022.0.4 -->
+    <relativePath/>
+  </parent>
+
+  <groupId>com.api</groupId>
+  <artifactId>apigateway</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>apigateway</name>
+  <description>API Gateway Service</description>
+
+  <properties>
+    <java.version>17</java.version>
+    <spring-cloud.version>2022.0.4</spring-cloud.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- ✅ Spring Cloud Gateway (Reactive stack) -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-gateway</artifactId>
+    </dependency>
+
+    <!-- ✅ Eureka Client -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+    </dependency>
+
+    <!-- ❌ DO NOT include spring-boot-starter-web (Servlet-based) -->
+
+    <!-- ✅ Test support -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+      <exclusions>
+        <!-- Exclude Web MVC from test scope as well -->
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-web</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+-------------------------------------------------------------------
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: false  # Makes service names lowercase for URI match
+      routes:
+        - id: customer-service
+          uri: lb://CUSTOMER-SERVICE
+          predicates:
+            - Path=/customers/**
+        - id: recharge-service
+          uri: lb://recharge-service
+          predicates:
+            - Path=/recharges/**
+        - id: plan-service
+          uri: lb://plan-service
+          predicates:
+            - Path=/plans/**
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web.reactive: DEBUG
+    reactor.netty: DEBUG
+-------------------------------------------------------------------
+========================================================================
+Customer service:
+package com.custservice;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+public class CustomerServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(CustomerServiceApplication.class, args);
+	}
+
+}
+----------------------------------------------------
+package com.custservice.controller;
+
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.custservice.entity.Customer;
+import com.custservice.service.CustomerService;
+
+@RestController
+@RequestMapping("/customers")
+public class CustomerController {
+
+	private final CustomerService service;
+
+	public CustomerController(CustomerService service) {
+		this.service = service;
+	}
+
+	@GetMapping
+	public List<Customer> getAll() {
+		return service.findAll();
+	}
+
+	@GetMapping("/{id}")
+	public ResponseEntity<Customer> getById(@PathVariable Long id) {
+		return service.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+	}
+
+	@PostMapping
+	public Customer create(@RequestBody Customer customer) {
+		return service.save(customer);
+	}
+
+	@PutMapping("/{id}")
+	public ResponseEntity<Customer> update(@PathVariable Long id, @RequestBody Customer customer) {
+		return service.findById(id).map(c -> {
+			c.setName(customer.getName());
+			c.setEmail(customer.getEmail());
+			c.setMobileNumber(customer.getMobileNumber());
+			return ResponseEntity.ok(service.save(c));
+		}).orElse(ResponseEntity.notFound().build());
+	}
+
+	@DeleteMapping("/{id}")
+	public ResponseEntity<Void> delete(@PathVariable Long id) {
+		service.deleteById(id);
+		return ResponseEntity.noContent().build();
+	}
+}
+----------------------------------------------------------------
+package com.custservice.entity;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+@Entity
+public class Customer {
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
+	private String name;
+	private String mobileNumber;
+	private String email;
+
+	public Customer() {
+	}
+
+	public Customer(Long id, String name, String mobileNumber, String email) {
+		super();
+		this.id = id;
+		this.name = name;
+		this.mobileNumber = mobileNumber;
+		this.email = email;
+	}
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getMobileNumber() {
+		return mobileNumber;
+	}
+
+	public void setMobileNumber(String mobileNumber) {
+		this.mobileNumber = mobileNumber;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	// getters, setters, constructors
+
+}
+-------------------------------------------------------
+package com.custservice.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.custservice.entity.Customer;
+
+public interface CustomerRepository extends JpaRepository<Customer, Long> {
+}
+------------------------------------------------------------------
+package com.custservice.service;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+
+import com.custservice.entity.Customer;
+import com.custservice.repository.CustomerRepository;
+
+@Service
+public class CustomerService {
+
+	private final CustomerRepository repository;
+
+	public CustomerService(CustomerRepository repository) {
+		this.repository = repository;
+	}
+
+	public List<Customer> findAll() {
+		return repository.findAll();
+	}
+
+	public Optional<Customer> findById(Long id) {
+		return repository.findById(id);
+	}
+
+	public Customer save(Customer customer) {
+		return repository.save(customer);
+	}
+
+	public void deleteById(Long id) {
+		repository.deleteById(id);
+	}
+}
+------------------------------------------------------------------------
+server:
+  port: 9001
+
+spring:
+  application:
+    name: CUSTOMER-SERVICE
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/customerdb
+    username: postgres
+    password: PVb@9284
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+  instance:
+    instance-id: ${spring.application.name}:${random.uuid}
+    prefer-ip-address: true
+------------------------------------------------------------------
+pom.xml
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.1.4</version> <!-- ✅ Compatible with Spring Cloud 2022.0.4 -->
+    <relativePath/>
+  </parent>
+
+  <groupId>com.custservice</groupId>
+  <artifactId>Customer-Service</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>Customer-Service</name>
+
+  <properties>
+    <java.version>17</java.version>
+    <spring-cloud.version>2022.0.4</spring-cloud.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+
+============================================================================
+Plan Server
+package com.planservice;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+public class PlanServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(PlanServiceApplication.class, args);
+	}
+}
+-----------------------------------------------------------------------
+package com.planservice.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.planservice.entity.Plan;
+import com.planservice.service.PlanService;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/plans")
+public class PlanController {
+
+	private final PlanService service;
+
+	public PlanController(PlanService service) {
+		this.service = service;
+	}
+
+	@GetMapping
+	public List<Plan> getAllPlans() {
+		return service.findAll();
+	}
+
+	@GetMapping("/{id}")
+	public ResponseEntity<Plan> getPlanById(@PathVariable Long id) {
+		return service.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+	}
+
+	@PostMapping
+	public Plan createPlan(@RequestBody Plan plan) {
+		return service.save(plan);
+	}
+
+	@PutMapping("/{id}")
+	public ResponseEntity<Plan> updatePlan(@PathVariable Long id, @RequestBody Plan updatedPlan) {
+		return service.findById(id).map(existingPlan -> {
+			existingPlan.setPlanName(updatedPlan.getPlanName());
+			existingPlan.setData(updatedPlan.getData());
+			existingPlan.setTalktime(updatedPlan.getTalktime());
+			existingPlan.setValidity(updatedPlan.getValidity());
+			return ResponseEntity.ok(service.save(existingPlan));
+		}).orElse(ResponseEntity.notFound().build());
+	}
+
+	@DeleteMapping("/{id}")
+	public ResponseEntity<Void> deletePlan(@PathVariable Long id) {
+		service.deleteById(id);
+		return ResponseEntity.noContent().build();
+	}
+}
+-----------------------------------------------------------------------------
+package com.planservice.entity;
+
+import jakarta.persistence.*;
+
+@Entity
+public class Plan {
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
+	private String planName;
+	private String data;
+	private String talktime;
+	private String validity;
+	
+	public Plan() {}
+
+	public Plan(Long id, String planName, String data, String talktime, String validity) {
+		super();
+		this.id = id;
+		this.planName = planName;
+		this.data = data;
+		this.talktime = talktime;
+		this.validity = validity;
+	}
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public String getPlanName() {
+		return planName;
+	}
+
+	public void setPlanName(String planName) {
+		this.planName = planName;
+	}
+
+	public String getData() {
+		return data;
+	}
+
+	public void setData(String data) {
+		this.data = data;
+	}
+
+	public String getTalktime() {
+		return talktime;
+	}
+
+	public void setTalktime(String talktime) {
+		this.talktime = talktime;
+	}
+
+	public String getValidity() {
+		return validity;
+	}
+
+	public void setValidity(String validity) {
+		this.validity = validity;
+	}
+
+	// getters, setters, constructors
+
+}
+-----------------------------------------------------------
+package com.planservice.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.planservice.entity.Plan;
+
+public interface PlanRepository extends JpaRepository<Plan, Long> {
+}
+----------------------------------------------------------------------
+package com.planservice.service;
+
+import org.springframework.stereotype.Service;
+
+import com.planservice.entity.Plan;
+import com.planservice.repository.PlanRepository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class PlanService {
+
+	private final PlanRepository repository;
+
+	public PlanService(PlanRepository repository) {
+		this.repository = repository;
+	}
+
+	public List<Plan> findAll() {
+		return repository.findAll();
+	}
+
+	public Optional<Plan> findById(Long id) {
+		return repository.findById(id);
+	}
+
+	public Plan save(Plan plan) {
+		return repository.save(plan);
+	}
+
+	public void deleteById(Long id) {
+		repository.deleteById(id);
+	}
+}
+----------------------------------------------------------------
+server:
+  port: 9002
+
+spring:
+  application:
+    name: plan-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/plandb
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: PVb@9284
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+  instance:
+    prefer-ip-address: true
+    ip-address: 127.0.0.1
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+    app-name: plan-service
+---------------------------------------------------------
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.1.4</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.planservice</groupId>
+  <artifactId>Plan_Service</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>Plan_Service</name>
+  <description>Plan Service</description>
+
+  <properties>
+    <java.version>17</java.version>
+    <spring-cloud.version>2022.0.4</spring-cloud.version> <!-- Add if using Spring Cloud -->
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    
+    <dependency>
+  <groupId>org.springframework.cloud</groupId>
+  <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+</dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+---=======================================================================================
+RechargeService:
+
+package com.rservice;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+public class RechargeServiceApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(RechargeServiceApplication.class, args);
+	}
+
+	@Bean
+	public WebClient.Builder webClientBuilder() {
+		return WebClient.builder();
+	}
+}------------------------------------------------------
+package com.rservice.controller;
+
+import com.rservice.dto.RechargeResponse;
+import com.rservice.entity.Recharge;
+import com.rservice.service.RechargeService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/recharges")
+public class RechargeController {
+
+    private final RechargeService service;
+
+    public RechargeController(RechargeService service) {
+        this.service = service;
+    }
+
+    @GetMapping
+    public List<Recharge> getAll() {
+        return service.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<RechargeResponse> getById(@PathVariable Long id) {
+        RechargeResponse response = service.getRechargeDetails(id);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/customer/{customerId}")
+    public List<Recharge> getByCustomer(@PathVariable Long customerId) {
+        return service.findByCustomerId(customerId);
+    }
+
+    @PostMapping
+    public ResponseEntity<?> recharge(@RequestParam Long customerId,
+                                      @RequestParam Long planId) {
+        try {
+            Recharge r = service.rechargeCustomer(customerId, planId);
+            return ResponseEntity.ok(r);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+}
+-----------------------------------------------------------------------------------
+package com.rservice.dto;
+
+public class CustomerDTO {
+	private Long id;
+	private String name;
+	private String mobileNumber;
+	private String email;
+
+	// Getters and Setters
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getMobileNumber() {
+		return mobileNumber;
+	}
+
+	public void setMobileNumber(String mobileNumber) {
+		this.mobileNumber = mobileNumber;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+}
+--------------------------------------------------------
+package com.rservice.dto;
+
+public class PlanDTO {
+	private Long id;
+	private String planName;
+	private double price;
+	private int validityInDays;
+
+	// Getters and Setters
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public String getPlanName() {
+		return planName;
+	}
+
+	public void setPlanName(String planName) {
+		this.planName = planName;
+	}
+
+	public double getPrice() {
+		return price;
+	}
+
+	public void setPrice(double price) {
+		this.price = price;
+	}
+
+	public int getValidityInDays() {
+		return validityInDays;
+	}
+
+	public void setValidityInDays(int validityInDays) {
+		this.validityInDays = validityInDays;
+	}
+}-----------------------------------------------------------------
+package com.rservice.dto;
+
+public class RechargeResponse {
+	private Long rechargeId;
+	private Long customerId;
+	private Long planId;
+	private String rechargeDate;
+	private CustomerDTO customer;
+	private PlanDTO plan;
+
+	// Getters and Setters
+	public Long getRechargeId() {
+		return rechargeId;
+	}
+
+	public void setRechargeId(Long rechargeId) {
+		this.rechargeId = rechargeId;
+	}
+
+	public Long getCustomerId() {
+		return customerId;
+	}
+
+	public void setCustomerId(Long customerId) {
+		this.customerId = customerId;
+	}
+
+	public Long getPlanId() {
+		return planId;
+	}
+
+	public void setPlanId(Long planId) {
+		this.planId = planId;
+	}
+
+	public String getRechargeDate() {
+		return rechargeDate;
+	}
+
+	public void setRechargeDate(String rechargeDate) {
+		this.rechargeDate = rechargeDate;
+	}
+
+	public CustomerDTO getCustomer() {
+		return customer;
+	}
+
+	public void setCustomer(CustomerDTO customer) {
+		this.customer = customer;
+	}
+
+	public PlanDTO getPlan() {
+		return plan;
+	}
+
+	public void setPlan(PlanDTO plan) {
+		this.plan = plan;
+	}
+}
+------------------------------------------------------------
+package com.rservice.entity;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "recharges")
+public class Recharge {
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
+	private Long customerId;
+	private Long planId;
+	private String rechargeDate;
+
+	public Recharge() {}
+
+	public Recharge(Long customerId, Long planId, String rechargeDate) {
+		this.customerId = customerId;
+		this.planId = planId;
+		this.rechargeDate = rechargeDate;
+	}
+
+	// Getters and Setters
+	public Long getId() { return id; }
+	public void setId(Long id) { this.id = id; }
+	public Long getCustomerId() { return customerId; }
+	public void setCustomerId(Long customerId) { this.customerId = customerId; }
+	public Long getPlanId() { return planId; }
+	public void setPlanId(Long planId) { this.planId = planId; }
+	public String getRechargeDate() { return rechargeDate; }
+	public void setRechargeDate(String rechargeDate) { this.rechargeDate = rechargeDate; }
+}
+-----------------------------------------------------------------------
+package com.rservice.repository;
+
+import com.rservice.entity.Recharge;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+
+public interface RechargeRepository extends JpaRepository<Recharge, Long> {
+    List<Recharge> findByCustomerId(Long customerId);
+}
+-------------------------------------------------------------------------------
+package com.rservice.service;
+
+import com.rservice.dto.CustomerDTO;
+import com.rservice.dto.PlanDTO;
+import com.rservice.dto.RechargeResponse;
+import com.rservice.entity.Recharge;
+import com.rservice.repository.RechargeRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Service
+public class RechargeService {
+
+    private final RechargeRepository repo;
+    private final WebClient.Builder webClientBuilder;
+
+    public RechargeService(RechargeRepository repo, WebClient.Builder webClientBuilder) {
+        this.repo = repo;
+        this.webClientBuilder = webClientBuilder;
+    }
+
+    public List<Recharge> findAll() {
+        return repo.findAll();
+    }
+
+    public List<Recharge> findByCustomerId(Long customerId) {
+        return repo.findByCustomerId(customerId);
+    }
+
+    public Recharge rechargeCustomer(Long customerId, Long planId) {
+        webClientBuilder.build()
+            .get().uri("http://customer-service/customers/{id}", customerId)
+            .retrieve().bodyToMono(Object.class)
+            .blockOptional()
+            .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        webClientBuilder.build()
+            .get().uri("http://plan-service/plans/{id}", planId)
+            .retrieve().bodyToMono(Object.class)
+            .blockOptional()
+            .orElseThrow(() -> new RuntimeException("Plan not found"));
+
+        Recharge recharge = new Recharge(customerId, planId, LocalDate.now().toString());
+        return repo.save(recharge);
+    }
+
+    public RechargeResponse getRechargeDetails(Long rechargeId) {
+        Recharge recharge = repo.findById(rechargeId)
+                .orElseThrow(() -> new RuntimeException("Recharge not found"));
+
+        CustomerDTO customer = webClientBuilder.build()
+                .get().uri("http://customer-service/customers/" + recharge.getCustomerId())
+                .retrieve().bodyToMono(CustomerDTO.class)
+                .block();
+
+        PlanDTO plan = webClientBuilder.build()
+                .get().uri("http://plan-service/plans/" + recharge.getPlanId())
+                .retrieve().bodyToMono(PlanDTO.class)
+                .block();
+
+        RechargeResponse response = new RechargeResponse();
+        response.setRechargeId(recharge.getId());
+        response.setCustomerId(recharge.getCustomerId());
+        response.setPlanId(recharge.getPlanId());
+        response.setRechargeDate(recharge.getRechargeDate());
+        response.setCustomer(customer);
+        response.setPlan(plan);
+
+        return response;
+    }
+}
+------------------------------------------------------
+server:
+  port: 9003
+
+spring:
+  application:
+    name: recharge-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/rechargedb
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: PVb@9284
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+eureka:
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+  instance:
+    prefer-ip-address: true
+    ip-address: 127.0.0.1
+-----------------------------------------------------------
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.1.4</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>com.rservice</groupId>
+  <artifactId>Recharge_Service</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>Recharge_Service</name>
+  <description>Recharge Microservice for Telecom App</description>
+
+  <properties>
+    <java.version>17</java.version>
+    <spring-cloud.version>2022.0.4</spring-cloud.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- Spring Web MVC -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- Spring Data JPA -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+
+    <!-- PostgreSQL Driver -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- Eureka Client -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+    </dependency>
+
+    <!-- WebClient for reactive calls -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webflux</artifactId>
+    </dependency>
+
+    <!-- Testing -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.junit.vintage</groupId>
+          <artifactId>junit-vintage-engine</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+
+=================================================================================
+apigateway 8080
+eserver 8761 
+customer service 9001 customerdb
+plan server 9002 plandb
+recharge service 9003 rechargedb
+
+| **Component**        | **Port** | **Description**                                                             | **Interactions**                                                                          |
+| -------------------- | -------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **Server**           | 8761     | Service registry — all microservices register here for discovery            | No direct client API calls; acts as a central registry                                    |
+| **API Gateway**      | 8080     | Routes client requests to microservices based on their paths                | Uses Eureka to discover services by name and routes via load balancer                     |
+| **Customer Service** | 9001     | Manages customer profiles (CRUD)                                            | Registers with Eureka; called by API Gateway and Recharge Service                         |
+| **Plan Service**     | 9002     | Manages telecom plans (CRUD)                                                | Registers with Eureka; called by API Gateway and Recharge Service                         |
+| **Recharge Service** | 9003     | Allows customers to recharge a plan; references Customer & Plan to validate | Calls Customer & Plan services via WebClient; registered in Eureka; called by API Gateway |
+
+========================================================================================
+package com.rservice.service;
+
+// Import statements for required classes and annotations
+import com.rservice.dto.CustomerDTO;
+import com.rservice.dto.PlanDTO;
+import com.rservice.dto.RechargeResponse;
+import com.rservice.entity.Recharge;
+import com.rservice.repository.RechargeRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Service  // Marks this class as a Spring service component, making it eligible for dependency injection
+public class RechargeService {
+
+    private final RechargeRepository repo;          // Repository for Recharge entity database operations
+    private final WebClient.Builder webClientBuilder;  // Builder to create WebClient instances for calling other microservices
+
+    // Constructor-based dependency injection for the repository and WebClient.Builder
+    public RechargeService(RechargeRepository repo, WebClient.Builder webClientBuilder) {
+        this.repo = repo;
+        this.webClientBuilder = webClientBuilder;
+    }
+
+    // Method to get all Recharge records from database
+    public List<Recharge> findAll() {
+        return repo.findAll();   // Returns list of all recharge entities
+    }
+
+    // Method to find all recharges for a specific customer by their ID
+    public List<Recharge> findByCustomerId(Long customerId) {
+        return repo.findByCustomerId(customerId);  // Fetch list filtered by customerId
+    }
+
+    // Core business method to perform a recharge for a customer with a selected plan
+    public Recharge rechargeCustomer(Long customerId, Long planId) {
+        // Validate customer existence by calling Customer Service via WebClient
+        webClientBuilder.build()
+            .get()
+            .uri("http://customer-service/customers/{id}", customerId)  // URI template with customerId
+            .retrieve()                                                  // Retrieve response
+            .bodyToMono(Object.class)                                    // Get response body as a Mono<Object>
+            .blockOptional()                                             // Block and get Optional result
+            .orElseThrow(() -> new RuntimeException("Customer not found")); // Throw if customer doesn't exist
+
+        // Validate plan existence by calling Plan Service via WebClient
+        webClientBuilder.build()
+            .get()
+            .uri("http://plan-service/plans/{id}", planId)               // URI template with planId
+            .retrieve()
+            .bodyToMono(Object.class)
+            .blockOptional()
+            .orElseThrow(() -> new RuntimeException("Plan not found")); // Throw if plan doesn't exist
+
+        // If both validations pass, create a new Recharge entity with current date
+        Recharge recharge = new Recharge(customerId, planId, LocalDate.now().toString());
+
+        // Save the new recharge record to the database and return it
+        return repo.save(recharge);
+    }
+
+    // Method to get complete recharge details including Customer and Plan info by recharge ID
+    public RechargeResponse getRechargeDetails(Long rechargeId) {
+        // Fetch recharge entity by its ID or throw exception if not found
+        Recharge recharge = repo.findById(rechargeId)
+                .orElseThrow(() -> new RuntimeException("Recharge not found"));
+
+        // Call Customer Service to fetch detailed customer info
+        CustomerDTO customer = webClientBuilder.build()
+                .get()
+                .uri("http://customer-service/customers/" + recharge.getCustomerId())
+                .retrieve()
+                .bodyToMono(CustomerDTO.class)  // Deserialize response into CustomerDTO
+                .block();                       // Wait synchronously for response
+
+        // Call Plan Service to fetch detailed plan info
+        PlanDTO plan = webClientBuilder.build()
+                .get()
+                .uri("http://plan-service/plans/" + recharge.getPlanId())
+                .retrieve()
+                .bodyToMono(PlanDTO.class)      // Deserialize into PlanDTO
+                .block();
+
+        // Build and populate RechargeResponse DTO with recharge, customer, and plan details
+        RechargeResponse response = new RechargeResponse();
+        response.setRechargeId(recharge.getId());
+        response.setCustomerId(recharge.getCustomerId());
+        response.setPlanId(recharge.getPlanId());
+        response.setRechargeDate(recharge.getRechargeDate());
+        response.setCustomer(customer);
+        response.setPlan(plan);
+
+        // Return the composed response DTO
+        return response;
+    }
+}
+------------------------------------------------------------------------------------------
+customer service:
+Post: http://localhost:8080/customers
+JSON
+{
+  "name": "Sonali",
+  "mobileNumber": "7777777777",
+  "email": "sonali@gmail.com"
+}
+
+URL:
+GET: http://localhost:8080/customers
+GET: http://localhost:8080/customers/{id}
+PUT: http://localhost:8080/customers/{id}
+JSON
+
+DELETE: http://localhost:8080/customers/{id}
+--------------------------------------------------------------------------------
+Post: http://localhost:8080/pans
+JSON
+{
+  "planName": "Basic 1GB",
+  "data": "1GB",
+  "talktime": "100 mins",
+  "validity": "30 days"
+}
+
+GET http://localhost:8080/plans
+GET http://localhost:8080/plans/id
+PUT GET http://localhost:8080/plans/id
+JSON
+
+DELETE http://localhost:8080/plans/id
+=====================================================
+recharge:
+list of all recharge
+GET http://localhost:8080/recharges
+GET http://localhost:8080/recharges
+GET http://localhost:8080/recharges/customer/11(CID)
+POST http://localhost:8080/recharges?customerId=1&planId=1
+http://localhost:8080/recharges?customerId=4&planId=2
+
+
+
+
