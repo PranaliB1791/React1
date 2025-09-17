@@ -1,0 +1,92 @@
+{
+  "students": [
+    {
+      "first_name": "John",
+      "last_name": "Doe",
+      "address": "HYD",
+      "gender": "male",
+      "state": "Telangana",
+      "city": "HYD",
+      "course": "2",
+      "fees": "20000",
+      "dob": "2005-07-25",
+      "contact": "976677665",
+      "email": "john@gmail.com",
+      "id": "7a2a"
+    },
+    {
+      "id": "a6ef",
+      "first_name": "Virat",
+      "last_name": "Kohli",
+      "address": "Pune",
+      "gender": "male",
+      "state": "Maharashtra",
+      "city": "Pune",
+      "course": "1",
+      "fees": "15000",
+      "dob": "2005-07-25",
+      "contact": "998877665",
+      "email": "virat@gmail.com"
+    },
+    {
+      "first_name": "Sayali",
+      "last_name": "Patil",
+      "address": "karve nagar,Pune",
+      "gender": "female",
+      "state": "Maharashtra",
+      "city": "Pune",
+      "course": "Java",
+      "fees": "25000",
+      "dob": "2004-06-17",
+      "contact": "7766854398",
+      "email": "sayali@gmail.com",
+      "password": "Sayali@123",
+      "id": "70e1"
+    },
+    {
+      "first_name": "Maithili",
+      "last_name": "Urade",
+      "address": "Pune",
+      "gender": "female",
+      "state": "Maharashtra",
+      "city": "Pune",
+      "course": "AWS",
+      "fees": "20000",
+      "dob": "2002-07-25",
+      "contact": "9988776679",
+      "email": "maithili@gmail.com",
+      "password": "Maithili@123",
+      "id": "3b09"
+    },
+    {
+      "first_name": "Madan",
+      "last_name": "Mishra",
+      "address": "Odisa",
+      "gender": "male",
+      "state": "Maharashtra",
+      "city": "Pune",
+      "course": "React",
+      "fees": "15000",
+      "dob": "2025-07-31",
+      "contact": "9889900900",
+      "email": "madan@gmail.com",
+      "password": "Madan@123",
+      "id": "1c29"
+    },
+    {
+      "id": "01a9",
+      "first_name": "Pranali",
+      "last_name": "B",
+      "address": "HY",
+      "gender": "female",
+      "state": "Telengana",
+      "city": "HYD",
+      "course": "React",
+      "fees": "15000",
+      "dob": "2025-09-23",
+      "contact": "7766854398",
+      "email": "pranali@gmail.com",
+      "password": "Pranali@123"
+    }
+  ]
+}
