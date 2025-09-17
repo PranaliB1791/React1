@@ -1,0 +1,45 @@
+package com.example.demo.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.example.demo.dto.UsageRequest;
+import com.example.demo.dto.UsageResponse;
+import com.example.demo.service.UsageService;
+
+import java.util.List;
+
+package com.example.demo.controller;
+
+import com.example.demo.dto.UsageRequest;
+import com.example.demo.dto.UsageResponse;
+import com.example.demo.service.UsageService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/usage")
+public class UsageController {
+
+    private final UsageService usageService;
+
+    public UsageController(UsageService usageService) {
+        this.usageService = usageService;
+    }
+
+    // Log usage
+    @PostMapping
+    public ResponseEntity<UsageResponse> logUsage(@RequestBody UsageRequest request) {
+        UsageResponse response = usageService.logUsage(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // Get usage by userId
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<UsageResponse>> getUsageByUserId(@PathVariable Long userId) {
+        List<UsageResponse> usageList = usageService.getUsageByUserId(userId);
+        return ResponseEntity.ok(usageList);
+    }
+}

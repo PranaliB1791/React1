@@ -1,0 +1,62 @@
+package com.example.demo.service;
+
+import org.springframework.stereotype.Service;
+
+import com.example.demo.dto.UsageRequest;
+import com.example.demo.dto.UsageResponse;
+import com.example.demo.entity.Usage;
+import com.example.demo.entity.UsageLog;
+import com.example.demo.repository.UsageRepository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class UsageServiceImpl implements UsageService {
+
+	private final UsageRepository repository;
+
+	public UsageServiceImpl(UsageRepository repository) {
+		this.repository = repository;
+	}
+
+	@Override
+	public UsageResponse logUsage(UsageRequest request) {
+		Usage log = new Usage();
+		log.setUserId(request.getUserId());
+		log.setPlanId(request.getPlanId());
+		log.setCallMinutes(request.getCallMinutes());
+		log.setDataUsageInGB(request.getDataUsageInGB());
+		log.setSmsCount(request.getSmsCount());
+		log.setTimestamp(LocalDateTime.now());
+
+		Usage saved = repository.save(log);
+
+		UsageResponse response = new UsageResponse();
+		response.setId(saved.getId());
+		response.setUserId(saved.getUserId());
+		response.setPlanId(saved.getPlanId());
+		response.setCallMinutes(saved.getCallMinutes());
+		response.setDataUsageInGB(saved.getDataUsageInGB());
+		response.setSmsCount(saved.getSmsCount());
+		response.setTimestamp(saved.getTimestamp());
+
+		return response;
+	}
+
+	@Override
+	public List<UsageResponse> getUsageByUserId(Long userId) {
+		return repository.findByUserId(userId).stream().map(log -> {
+			UsageResponse res = new UsageResponse();
+			res.setId(log.getId());
+			res.setUserId(log.getUserId());
+			res.setPlanId(log.getPlanId());
+			res.setCallMinutes(log.getCallMinutes());
+			res.setDataUsageInGB(log.getDataUsageInGB());
+			res.setSmsCount(log.getSmsCount());
+			res.setTimestamp(log.getTimestamp());
+			return res;
+		}).collect(Collectors.toList());
+	}
+}

@@ -1,0 +1,45 @@
+package com.example.demo.dto;
+
+import java.time.LocalDateTime;
+
+import java.time.LocalDateTime;
+
+public class RechargeResponse {
+	private Long id;
+	private Long userId;
+	private Long planId;
+	private LocalDateTime rechargeDate;
+	private UserDto user; // NEW
+	private PlanDto plan; // NEW
+
+	public RechargeResponse() {
+	}
+
+	// New Constructor for enriched response
+	public RechargeResponse(Long id, Long userId, Long planId, LocalDateTime rechargeDate, UserDto user, PlanDto plan) {
+		this.id = id;
+		this.userId = userId;
+		this.planId = planId;
+		this.rechargeDate = rechargeDate;
+		this.user = user;
+		this.plan = plan;
+	}
+
+	// existing getters/setters
+
+	public UserDto getUser() {
+		return user;
+	}
+
+	public void setUser(UserDto user) {
+		this.user = user;
+	}
+
+	public PlanDto getPlan() {
+		return plan;
+	}
+
+	public void setPlan(PlanDto plan) {
+		this.plan = plan;
+	}
+}

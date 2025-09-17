@@ -1,0 +1,20 @@
+server:
+  port: 9005
+
+spring:
+  application:
+    name: usage-service
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/smarttelecom-usage
+      database: smarttelecom-usage
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    ip-address: 127.0.0.1
+    non-secure-port: 9005

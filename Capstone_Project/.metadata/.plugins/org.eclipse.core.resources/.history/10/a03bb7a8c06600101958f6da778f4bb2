@@ -1,0 +1,12 @@
+package com.example.demo.observer;
+
+package com.example.demo.observer;
+
+import com.example.demo.entity.Bill;
+
+public class SMSNotificationObserver implements NotificationObserver {
+    @Override
+    public void notify(Bill bill) {
+        System.out.println("SMS sent to user " + bill.getUserId() + ": Your bill of ₹" + bill.getTotalCharge() + " is generated.");
+    }
+}

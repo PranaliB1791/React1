@@ -1,0 +1,101 @@
+package com.example.demo.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.example.demo.dto.BillResponse;
+import com.example.demo.dto.UsageResponse;
+import com.example.demo.dto.PlanResponse;
+import com.example.demo.entity.Bill;
+import com.example.demo.repository.BillRepository;
+import com.example.demo.strategy.BillingStrategy;
+import com.example.demo.strategy.BillingStrategyFactory;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class BillingServiceImpl implements BillingService {
+
+    @Autowired
+    private BillRepository billRepository;
+
+    @Autowired
+    private UsageClient usageClient; // Fetches usage logs from usage-service
+
+    @Autowired
+    private PlanClient planClient;   // Fetches plan details from plan-service
+
+    @Override
+    public BillResponse generateBillForUser(Long userId) {
+        // 1. Fetch usage logs for the user from UsageService
+        List<UsageResponse> usageList = usageClient.getUsageForUser(userId);
+
+        Long planId = null;
+        if (!usageList.isEmpty()) {
+            planId = usageList.get(0).getPlanId();
+        }
+
+        // 2. Fetch plan details from PlanService using planId
+        PlanResponse plan = null;
+        String planType = "DEFAULT";
+        if (planId != null) {
+            plan = planClient.getPlanById(planId);
+            if (plan != null && plan.getType() != null) {
+                planType = plan.getType();
+            }
+        }
+
+        // 3. Get the right billing strategy for this plan type
+        BillingStrategy strategy = BillingStrategyFactory.getStrategy(plan);
+
+        // 4. Calculate charges using the strategy
+        double callCharge = strategy.calculateCallCharge(usageList, plan);
+        double dataCharge = strategy.calculateDataCharge(usageList, plan);
+        double smsCharge = strategy.calculateSmsCharge(usageList, plan);
+        double totalCharge = callCharge + dataCharge + smsCharge;
+
+        // 5. Create and save the Bill
+        Bill bill = new Bill();
+        bill.setUserId(userId);
+        bill.setPlanId(planId);
+        bill.setCallCharge(callCharge);
+        bill.setDataCharge(dataCharge);
+        bill.setSmsCharge(smsCharge);
+        bill.setTotalCharge(totalCharge);
+        bill.setGeneratedAt(LocalDateTime.now());
+        bill.setStatus("UNPAID");
+
+        bill = billRepository.save(bill);
+
+        // 6. Simulate notification observer
+        System.out.println("[NOTIFY] Bill generated for userId " + userId + " | PlanType: " + planType);
+
+        return mapToResponse(bill);
+    }
+
+    private BillResponse mapToResponse(Bill b) {
+        BillResponse res = new BillResponse();
+        res.setId(b.getId());
+        res.setUserId(b.getUserId());
+        res.setPlanId(b.getPlanId());
+        res.setCallCharge(b.getCallCharge());
+        res.setDataCharge(b.getDataCharge());
+        res.setSmsCharge(b.getSmsCharge());
+        res.setTotalCharge(b.getTotalCharge());
+        res.setGeneratedAt(b.getGeneratedAt());
+        res.setStatus(b.getStatus());
+        return res;
+    }
+
+    @Override
+    public List<BillResponse> getBillsForUser(Long userId) {
+        List<Bill> bills = billRepository.findByUserId(userId);
+        List<BillResponse> responses = new ArrayList<>();
+        for (Bill b : bills) {
+            responses.add(mapToResponse(b));
+        }
+        return responses;
+    }
+}

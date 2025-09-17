@@ -1,0 +1,33 @@
+package com.example.demo.dto;
+
+package com.example.demo.dto;
+
+import java.time.LocalDateTime;
+
+public class UsageResponse {
+	private String id;
+	private Long userId;
+	private Long planId;
+	private int callMinutes;
+	private double dataUsageInGB;
+	private int smsCount;
+	private LocalDateTime timestamp;
+
+	public UsageResponse() {
+	}
+
+	public UsageResponse(String id, Long userId, Long planId, int callMinutes, double dataUsageInGB, int smsCount,
+			LocalDateTime timestamp) {
+		super();
+		this.id = id;
+		this.userId = userId;
+		this.planId = planId;
+		this.callMinutes = callMinutes;
+		this.dataUsageInGB = dataUsageInGB;
+		this.smsCount = smsCount;
+		this.timestamp = timestamp;
+	}
+
+	// Getters and setters for all fields
+	// ... [copy from your usage microservice or DTO definition]
+}

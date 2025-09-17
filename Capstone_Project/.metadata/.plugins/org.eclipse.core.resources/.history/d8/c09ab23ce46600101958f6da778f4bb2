@@ -1,0 +1,140 @@
+package com.example.demo.service;
+
+import com.example.demo.dto.BillResponse;
+import com.example.demo.dto.PlanResponse;
+import com.example.demo.dto.UsageResponse;
+import com.example.demo.entity.Bill;
+import com.example.demo.exception.BillNotFoundException;
+import com.example.demo.exception.ExternalServiceException;
+import com.example.demo.exception.UsageDataNotFoundException;
+import com.example.demo.repository.BillRepository;
+import com.example.demo.strategy.BillingStrategy;
+import com.example.demo.strategy.BillingStrategyFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class BillingServiceImpl implements BillingService {
+
+    private static final Logger logger = LoggerFactory.getLogger(BillingServiceImpl.class);
+
+    @Autowired
+    private BillRepository billRepository;
+
+    @Autowired
+    private UsageClient usageClient; // Fetches usage logs from usage-service
+
+    @Autowired
+    private PlanClient planClient;   // Fetches plan details from plan-service
+
+    @Override
+    public BillResponse generateBillForUser(Long userId) {
+        List<UsageResponse> usageList;
+        try {
+            usageList = usageClient.getUsageForUser(userId);
+        } catch (Exception e) {
+            String errorMsg = "Error fetching usage data for user " + userId;
+            logger.error(errorMsg, e);
+            throw new ExternalServiceException(errorMsg, e);
+        }
+
+        if (usageList == null || usageList.isEmpty()) {
+            String msg = "No usage data found for user " + userId;
+            logger.warn(msg);
+            throw new UsageDataNotFoundException(userId);
+        }
+
+        Long planId = usageList.get(0).getPlanId();
+
+        PlanResponse plan = null;
+        String planType = "DEFAULT";
+        if (planId != null) {
+            try {
+                plan = planClient.getPlanById(planId);
+            } catch (Exception e) {
+                String errorMsg = "Error fetching plan data for planId " + planId;
+                logger.error(errorMsg, e);
+                throw new ExternalServiceException(errorMsg, e);
+            }
+            if (plan != null && plan.getType() != null) {
+                planType = plan.getType();
+            }
+        }
+
+        BillingStrategy strategy = BillingStrategyFactory.getStrategy(planType);
+
+        double callCharge = strategy.calculateCallCharge(usageList, plan);
+        double dataCharge = strategy.calculateDataCharge(usageList, plan);
+        double smsCharge = strategy.calculateSmsCharge(usageList, plan);
+        double totalCharge = callCharge + dataCharge + smsCharge;
+
+        Bill bill = new Bill();
+        bill.setUserId(userId);
+        bill.setPlanId(planId);
+        bill.setCallCharge(callCharge);
+        bill.setDataCharge(dataCharge);
+        bill.setSmsCharge(smsCharge);
+        bill.setTotalCharge(totalCharge);
+        bill.setGeneratedAt(LocalDateTime.now());
+        bill.setStatus("UNPAID");
+
+        bill = billRepository.save(bill);
+
+        logger.info("[NOTIFY] Bill generated for userId {} | PlanType: {}", userId, planType);
+
+        return mapToResponse(bill);
+    }
+
+    @Override
+    public List<BillResponse> getBillsForUser(Long userId) {
+        List<Bill> bills = billRepository.findByUserId(userId);
+        List<BillResponse> responses = new ArrayList<>();
+        for (Bill b : bills) {
+            responses.add(mapToResponse(b));
+        }
+        return responses;
+    }
+
+    @Override
+    public BillResponse getBillById(Long billId) {
+        Bill bill = billRepository.findById(billId)
+                .orElseThrow(() -> new BillNotFoundException(billId));
+        return mapToResponse(bill);
+    }
+
+    @Override
+    public List<BillResponse> getAllBills() {
+        return billRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void deleteBill(Long billId) {
+        if (!billRepository.existsById(billId)) {
+            throw new BillNotFoundException(billId);
+        }
+        billRepository.deleteById(billId);
+    }
+
+    private BillResponse mapToResponse(Bill b) {
+        BillResponse res = new BillResponse();
+        res.setId(b.getId());
+        res.setUserId(b.getUserId());
+        res.setPlanId(b.getPlanId());
+        res.setCallCharge(b.getCallCharge());
+        res.setDataCharge(b.getDataCharge());
+        res.setSmsCharge(b.getSmsCharge());
+        res.setTotalCharge(b.getTotalCharge());
+        res.setGeneratedAt(b.getGeneratedAt());
+        res.setStatus(b.getStatus());
+        return res;
+    }
+}

@@ -1,0 +1,36 @@
+package com.example.demo.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.example.demo.dto.UsageRequest;
+import com.example.demo.dto.UsageResponse;
+import com.example.demo.service.UsageService;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/usages")
+public class UsageController {
+
+    private final UsageService usageService;
+
+    public UsageController(UsageService usageService) {
+        this.usageService = usageService;
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
+    @PostMapping
+    public ResponseEntity<UsageResponse> logUsage(@RequestBody UsageRequest request) {
+        UsageResponse response = usageService.logUsage(request);
+        return ResponseEntity.ok(response);
+    }
+
+
+    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<UsageResponse>> getUsageByUserId(@PathVariable Long userId) {
+        List<UsageResponse> usageList = usageService.getUsageByUserId(userId);
+        return ResponseEntity.ok(usageList);
+    }
+}

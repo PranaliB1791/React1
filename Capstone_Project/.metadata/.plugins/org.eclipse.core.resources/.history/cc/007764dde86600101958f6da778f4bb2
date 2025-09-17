@@ -1,0 +1,29 @@
+package com.example.demo.service;
+
+import com.example.demo.dto.PlanResponse;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.beans.factory.annotation.Value;
+
+@Service
+public class PlanClient {
+
+    @Value("${plan.service.url:http://localhost:9003}")
+    private String planServiceUrl;
+
+    public PlanResponse getPlanById(Long planId) {
+        RestTemplate restTemplate = new RestTemplate();
+        String url = planServiceUrl + "/plans/" + planId; // Adjust if URL differs
+        try {
+            return restTemplate.getForObject(url, PlanResponse.class);
+        } catch (HttpClientErrorException.NotFound ex) {
+            System.out.println("Plan not found for id: " + planId);
+            return null;
+        } catch (ResourceAccessException ex) {
+            System.err.println("Plan service inaccessible: " + ex.getMessage());
+            throw new RuntimeException("Failed to fetch plan details", ex);
+        }
+    }
+}

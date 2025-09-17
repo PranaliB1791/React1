@@ -1,0 +1,90 @@
+package com.example.demo.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.example.demo.dto.BillResponse;
+import com.example.demo.dto.UsageResponse;
+import com.example.demo.entity.Bill;
+import com.example.demo.repository.BillRepository;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class BillingServiceImpl implements BillingService {
+
+	@Autowired
+	private BillRepository billRepository;
+
+	@Autowired
+	private UsageClient usageClient; // UsageClient fetches usage logs from usage-service
+
+	@Override
+	public BillResponse generateBillForUser(Long userId) {
+		// Fetch usage logs for the user from UsageService
+		List<UsageResponse> usageList = usageClient.getUsageForUser(userId);
+
+		double totalCallMinutes = 0;
+		double totalDataGB = 0;
+		int totalSmsCount = 0;
+		Long planId = null;
+
+		// Aggregate usage from all usage records
+		for (UsageResponse usage : usageList) {
+			totalCallMinutes += usage.getCallMinutes();
+			totalDataGB += usage.getDataUsageInGB();
+			totalSmsCount += usage.getSmsCount();
+			if (planId == null)
+				planId = usage.getPlanId();
+		}
+
+		// Calculate charges (you can fetch plan rates from Plan Service if needed)
+		double callCharge = totalCallMinutes * 0.5;
+		double dataCharge = totalDataGB * 10.0;
+		double smsCharge = totalSmsCount * 0.25;
+		double totalCharge = callCharge + dataCharge + smsCharge;
+
+		Bill bill = new Bill();
+		bill.setUserId(userId);
+		bill.setPlanId(planId);
+		bill.setCallCharge(callCharge);
+		bill.setDataCharge(dataCharge);
+		bill.setSmsCharge(smsCharge);
+		bill.setTotalCharge(totalCharge);
+		bill.setGeneratedAt(LocalDateTime.now());
+		bill.setStatus("UNPAID");
+
+		bill = billRepository.save(bill);
+
+		// Simulate notification observer
+		System.out.println("[NOTIFY] Bill generated for userId " + userId);
+
+		return mapToResponse(bill);
+	}
+
+	private BillResponse mapToResponse(Bill b) {
+		BillResponse res = new BillResponse();
+		res.setId(b.getId());
+		res.setUserId(b.getUserId());
+		res.setPlanId(b.getPlanId());
+		res.setCallCharge(b.getCallCharge());
+		res.setDataCharge(b.getDataCharge());
+		res.setSmsCharge(b.getSmsCharge());
+		res.setTotalCharge(b.getTotalCharge());
+		res.setGeneratedAt(b.getGeneratedAt());
+		res.setStatus(b.getStatus());
+		return res;
+	}
+
+	@Override
+	public List<BillResponse> getBillsForUser(Long userId) {
+		List<Bill> bills = billRepository.findByUserId(userId);
+		List<BillResponse> responses = new ArrayList<>();
+		for (Bill b : bills) {
+			responses.add(mapToResponse(b));
+		}
+		return responses;
+	}
+}

@@ -1,0 +1,126 @@
+package com.example.demo.service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import com.example.demo.config.ModelMapperConfig;
+import com.example.demo.dto.*;
+import com.example.demo.entity.Recharge;
+import com.example.demo.exception.RechargeNotFoundException;
+import com.example.demo.repository.RechargeRepository;
+
+@Service
+public class RechargeServiceImpl implements RechargeService {
+
+	@Autowired
+	private ModelMapper modelMapper; 
+
+	@Autowired
+	private RechargeRepository rechargeRepository;
+
+	@Autowired
+	private RestTemplate restTemplate;
+
+	private static final String USER_SERVICE_URL = "http://user-service/users/";
+	private static final String PLAN_SERVICE_URL = "http://plan-service/plans/";
+
+	private void validateUser(Long userId) {
+		try {
+			restTemplate.getForObject(USER_SERVICE_URL + userId, Object.class);
+		} catch (Exception e) {
+			throw new RechargeNotFoundException("Invalid User ID: " + userId);
+		}
+	}
+
+	private void validatePlan(Long planId) {
+		try {
+			restTemplate.getForObject(PLAN_SERVICE_URL + planId, Object.class);
+		} catch (Exception e) {
+			throw new RechargeNotFoundException("Invalid Plan ID: " + planId);
+		}
+	}
+
+	private UserDto fetchUser(Long userId) {
+		return restTemplate.getForObject(USER_SERVICE_URL + userId, UserDto.class);
+	}
+
+	private PlanDto fetchPlan(Long planId) {
+		return restTemplate.getForObject(PLAN_SERVICE_URL + planId, PlanDto.class);
+	}
+
+	@Override
+	public RechargeResponse createRecharge(RechargeRequest request) {
+		validateUser(request.getUserId());
+		validatePlan(request.getPlanId());
+
+		PlanDto plan = fetchPlan(request.getPlanId());
+		UserDto user = fetchUser(request.getUserId());
+
+		Recharge recharge = new Recharge();
+		recharge.setUserId(request.getUserId());
+		recharge.setPlanId(request.getPlanId());
+		recharge.setRechargeDate(
+				request.getRechargeDate() != null ? request.getRechargeDate().atStartOfDay() : LocalDateTime.now());
+		recharge.setAmount(plan.getPrice());
+
+		Recharge saved = rechargeRepository.save(recharge);
+
+		return new RechargeResponse(saved.getId(), saved.getUserId(), saved.getPlanId(), saved.getRechargeDate(), user,
+				plan);
+	}
+
+	@Override
+	public RechargeResponse getRechargeById(Long id) {
+		Recharge recharge = rechargeRepository.findById(id)
+				.orElseThrow(() -> new RechargeNotFoundException("Recharge not found with ID: " + id));
+
+		UserDto user = fetchUser(recharge.getUserId());
+		PlanDto plan = fetchPlan(recharge.getPlanId());
+
+		return new RechargeResponse(recharge.getId(), recharge.getUserId(), recharge.getPlanId(),
+				recharge.getRechargeDate(), user, plan);
+	}
+
+	@Override
+	public List<RechargeResponse> getRechargesByUserId(Long userId) {
+		return rechargeRepository
+				.findByUserId(userId).stream().map(r -> new RechargeResponse(r.getId(), r.getUserId(), r.getPlanId(),
+						r.getRechargeDate(), fetchUser(r.getUserId()), fetchPlan(r.getPlanId())))
+				.collect(Collectors.toList());
+	}
+
+	@Override
+	public List<RechargeResponse> getRechargesByPlanId(Long planId) {
+		return rechargeRepository
+				.findByPlanId(planId).stream().map(r -> new RechargeResponse(r.getId(), r.getUserId(), r.getPlanId(),
+						r.getRechargeDate(), fetchUser(r.getUserId()), fetchPlan(r.getPlanId())))
+				.collect(Collectors.toList());
+	}
+
+	@Override
+	public List<Object> getAllRecharges(String role) {
+		return rechargeRepository.findAll().stream().map(recharge -> {
+			if (role.equalsIgnoreCase("ADMIN")) {
+				RechargeResponseForAdmin adminDto = modelMapper.map(recharge, RechargeResponseForAdmin.class);
+				adminDto.setUser(fetchUser(recharge.getUserId()));
+				adminDto.setPlan(fetchPlan(recharge.getPlanId()));
+				return adminDto;
+			} else {
+				PlanDto plan = fetchPlan(recharge.getPlanId());
+				RechargeResponseForCustomer customerDto = new RechargeResponseForCustomer();
+				customerDto.setPlanName(plan.getPlanName());
+				customerDto.setPrice(plan.getPrice());
+				customerDto.setRechargeDate(recharge.getRechargeDate());
+				return customerDto;
+			}
+		}).collect(Collectors.toList());
+	}
+	
+
+}

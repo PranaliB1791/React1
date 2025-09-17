@@ -1,0 +1,123 @@
+package com.example.demo.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.example.demo.dto.BillResponse;
+import com.example.demo.dto.UsageResponse;
+import com.example.demo.dto.PlanResponse;
+import com.example.demo.entity.Bill;
+import com.example.demo.repository.BillRepository;
+import com.example.demo.strategy.BillingStrategy;
+import com.example.demo.strategy.BillingStrategyFactory;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class BillingServiceImpl implements BillingService {
+
+    @Autowired
+    private BillRepository billRepository;
+
+    @Autowired
+    private UsageClient usageClient; // Fetches usage logs from usage-service
+
+    @Autowired
+    private PlanClient planClient;   // Fetches plan details from plan-service
+
+    @Override
+    public BillResponse generateBillForUser(Long userId) {
+        // Your existing generateBillForUser implementation...
+        List<UsageResponse> usageList = usageClient.getUsageForUser(userId);
+
+        Long planId = null;
+        if (!usageList.isEmpty()) {
+            planId = usageList.get(0).getPlanId();
+        }
+
+        PlanResponse plan = null;
+        String planType = "DEFAULT";
+        if (planId != null) {
+            plan = planClient.getPlanById(planId);
+            if (plan != null && plan.getType() != null) {
+                planType = plan.getType();
+            }
+        }
+
+        BillingStrategy strategy = BillingStrategyFactory.getStrategy(plan);
+
+        double callCharge = strategy.calculateCallCharge(usageList, plan);
+        double dataCharge = strategy.calculateDataCharge(usageList, plan);
+        double smsCharge = strategy.calculateSmsCharge(usageList, plan);
+        double totalCharge = callCharge + dataCharge + smsCharge;
+
+        Bill bill = new Bill();
+        bill.setUserId(userId);
+        bill.setPlanId(planId);
+        bill.setCallCharge(callCharge);
+        bill.setDataCharge(dataCharge);
+        bill.setSmsCharge(smsCharge);
+        bill.setTotalCharge(totalCharge);
+        bill.setGeneratedAt(LocalDateTime.now());
+        bill.setStatus("UNPAID");
+
+        bill = billRepository.save(bill);
+
+        System.out.println("[NOTIFY] Bill generated for userId " + userId + " | PlanType: " + planType);
+
+        return mapToResponse(bill);
+    }
+
+    @Override
+    public List<BillResponse> getBillsForUser(Long userId) {
+        List<Bill> bills = billRepository.findByUserId(userId);
+        List<BillResponse> responses = new ArrayList<>();
+        for (Bill b : bills) {
+            responses.add(mapToResponse(b));
+        }
+        return responses;
+    }
+
+    // New method: get bill by ID
+    @Override
+    public BillResponse getBillById(Long billId) {
+        Bill bill = billRepository.findById(billId)
+                .orElseThrow(() -> new RuntimeException("Bill not found with id: " + billId));
+        return mapToResponse(bill);
+    }
+
+    // New method: get all bills
+    @Override
+    public List<BillResponse> getAllBills() {
+        return billRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    // New method: delete a bill by id
+    @Override
+    public void deleteBill(Long billId) {
+        if (!billRepository.existsById(billId)) {
+            throw new RuntimeException("Cannot delete. Bill not found with id: " + billId);
+        }
+        billRepository.deleteById(billId);
+    }
+
+    // your existing mapping method
+    private BillResponse mapToResponse(Bill b) {
+        BillResponse res = new BillResponse();
+        res.setId(b.getId());
+        res.setUserId(b.getUserId());
+        res.setPlanId(b.getPlanId());
+        res.setCallCharge(b.getCallCharge());
+        res.setDataCharge(b.getDataCharge());
+        res.setSmsCharge(b.getSmsCharge());
+        res.setTotalCharge(b.getTotalCharge());
+        res.setGeneratedAt(b.getGeneratedAt());
+        res.setStatus(b.getStatus());
+        return res;
+    }
+}

@@ -1,0 +1,14 @@
+package com.example.demo.service;
+
+import java.util.List;
+
+import com.example.demo.dto.UsageRequest;
+import com.example.demo.dto.UsageResponse;
+import com.example.demo.entity.UsageLog;
+
+
+public interface UsageService {
+	UsageResponse logUsage(UsageRequest request);
+
+	List<UsageResponse> getUsageByUserId(Long userId);
+}

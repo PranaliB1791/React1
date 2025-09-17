@@ -1,0 +1,36 @@
+package com.example.demo.service;
+
+import com.example.demo.dto.UsageResponse;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.beans.factory.annotation.Value;
+
+import java.util.Arrays;
+import java.util.List;
+
+@Service
+public class UsageClient {
+
+    @Value("${usage.service.url:http://localhost:9005}")
+    private String usageServiceUrl;
+
+    public List<UsageResponse> getUsageForUser(Long userId) {
+        RestTemplate restTemplate = new RestTemplate();
+        String url = usageServiceUrl + "/usages/user/" + userId;
+        try {
+            UsageResponse[] arr = restTemplate.getForObject(url, UsageResponse[].class);
+            if (arr == null) {
+                return List.of();
+            }
+            return Arrays.asList(arr);
+        } catch (HttpClientErrorException.NotFound ex) {
+            System.out.println("Usage data not found for user: " + userId);
+            return List.of();
+        } catch (ResourceAccessException ex) {
+            System.err.println("Usage service inaccessible: " + ex.getMessage());
+            throw new RuntimeException("Failed to fetch usage data", ex);
+        }
+    }
+}

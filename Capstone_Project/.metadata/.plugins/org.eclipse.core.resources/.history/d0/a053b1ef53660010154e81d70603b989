@@ -1,0 +1,50 @@
+package com.example.demo.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.example.demo.dto.RechargeRequest;
+import com.example.demo.dto.RechargeResponse;
+import com.example.demo.service.RechargeService;
+
+import jakarta.validation.Valid;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/recharges")
+public class RechargeController {
+
+	private final RechargeService rechargeService;
+
+	public RechargeController(RechargeService rechargeService) {
+		this.rechargeService = rechargeService;
+	}
+
+	@PostMapping
+	public ResponseEntity<RechargeResponse> createRecharge(@RequestBody @Valid RechargeRequest request) {
+		RechargeResponse response = rechargeService.createRecharge(request);
+		return ResponseEntity.ok(response);
+	}
+
+	@GetMapping
+	public ResponseEntity<List<RechargeResponse>> getAllRecharges() {
+		return ResponseEntity.ok(rechargeService.getAllRecharges());
+	}
+
+	@GetMapping("/{id}")
+	public ResponseEntity<RechargeResponse> getRechargeById(@PathVariable Long id) {
+		return ResponseEntity.ok(rechargeService.getRechargeById(id));
+	}
+
+	@GetMapping("/user/{userId}")
+	public ResponseEntity<List<RechargeResponse>> getRechargesByUser(@PathVariable Long userId) {
+		return ResponseEntity.ok(rechargeService.getRechargesByUserId(userId));
+	}
+
+	@GetMapping("/plan/{planId}")
+	public ResponseEntity<List<RechargeResponse>> getRechargesByPlan(@PathVariable Long planId) {
+		return ResponseEntity.ok(rechargeService.getRechargesByPlanId(planId));
+	}
+
+}

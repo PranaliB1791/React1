@@ -1,0 +1,11 @@
+package com.example.demo.repository;
+
+import org.springframework.data.mongodb.repository.MongoRepository;
+import com.example.demo.entity.UsageLog;
+import java.util.List;
+
+public interface UsageRepository extends MongoRepository<UsageLog, Long> {
+	List<UsageLog> findByUserId(Long userId);
+
+	List<UsageLog> findByPlanId(Long planId);
+}

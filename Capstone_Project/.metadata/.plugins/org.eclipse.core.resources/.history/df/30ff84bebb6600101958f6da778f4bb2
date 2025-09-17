@@ -1,0 +1,7 @@
+package com.example.demo.dto;
+
+public class BillRequest {
+	private Long userId;
+	// add planId or other fields as needed
+	// getters/setters
+}

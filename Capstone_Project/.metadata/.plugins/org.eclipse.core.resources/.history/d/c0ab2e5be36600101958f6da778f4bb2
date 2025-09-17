@@ -1,0 +1,40 @@
+package com.example.demo.exception;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+
+/**
+ * Global exception handler to catch exceptions thrown across all controllers
+ * and return structured error responses.
+ */
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+	/**
+	 * Handles generic runtime exceptions.
+	 *
+	 * @param ex the thrown RuntimeException
+	 * @return ResponseEntity with JSON body and HTTP 400 status
+	 */
+	@ExceptionHandler(RuntimeException.class)
+	public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
+		Map<String, Object> errorBody = Map.of("timestamp", LocalDateTime.now(), "status",
+				HttpStatus.BAD_REQUEST.value(), "error", "Bad Request", "message", ex.getMessage());
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorBody);
+	}
+
+	// You can add other handlers for more specific exceptions:
+	//
+	// @ExceptionHandler(EntityNotFoundException.class)
+	// public ResponseEntity<Map<String, Object>>
+	// handleEntityNotFound(EntityNotFoundException ex) { ... }
+	//
+	// @ExceptionHandler(MethodArgumentNotValidException.class)
+	// public ResponseEntity<Map<String, Object>>
+	// handleValidationExceptions(MethodArgumentNotValidException ex) { ... }
+}

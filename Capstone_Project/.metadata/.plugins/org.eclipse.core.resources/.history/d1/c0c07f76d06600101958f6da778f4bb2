@@ -1,0 +1,19 @@
+package com.example.demo.strategy;
+
+import com.example.demo.dto.PlanResponse;
+
+public class BillingStrategyFactory {
+	public static BillingStrategy getStrategy(PlanResponse plan) {
+		if (plan == null)
+			return new PrepaidBillingStrategy(); // Default
+		switch (plan.getType().toUpperCase()) {
+		case "POSTPAID":
+			return new PostpaidBillingStrategy();
+		case "DATA_ONLY":
+			return new DataOnlyBillingStrategy();
+		case "PREPAID":
+		default:
+			return new PrepaidBillingStrategy();
+		}
+	}
+}

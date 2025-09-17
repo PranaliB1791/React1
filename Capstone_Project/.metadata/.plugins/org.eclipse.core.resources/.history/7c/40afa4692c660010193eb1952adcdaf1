@@ -1,0 +1,86 @@
+package com.example.demo.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import com.example.demo.dto.RechargeRequest;
+import com.example.demo.dto.RechargeResponse;
+import com.example.demo.dto.UserDto;
+import com.example.demo.dto.PlanDto;
+import com.example.demo.entity.Recharge;
+import com.example.demo.exception.RechargeNotFoundException;
+import com.example.demo.repository.RechargeRepository;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class RechargeServiceImpl implements RechargeService {
+
+	@Autowired
+	private RechargeRepository rechargeRepository;
+
+	@Autowired
+	private RestTemplate restTemplate;
+
+	private static final String USER_SERVICE_URL = "http://user-service/users/";
+	private static final String PLAN_SERVICE_URL = "http://plan-service/plans/";
+
+	private void validateUser(Long userId) {
+		try {
+			restTemplate.getForObject(USER_SERVICE_URL + userId, Object.class);
+		} catch (Exception e) {
+			throw new RechargeNotFoundException("Invalid User ID: " + userId);
+		}
+	}
+
+	private void validatePlan(Long planId) {
+		try {
+			restTemplate.getForObject(PLAN_SERVICE_URL + planId, Object.class);
+		} catch (Exception e) {
+			throw new RechargeNotFoundException("Invalid Plan ID: " + planId);
+		}
+	}
+
+	private UserDto fetchUser(Long userId) {
+		return restTemplate.getForObject(USER_SERVICE_URL + userId, UserDto.class);
+	}
+
+	private PlanDto fetchPlan(Long planId) {
+		return restTemplate.getForObject(PLAN_SERVICE_URL + planId, PlanDto.class);
+	}
+
+	@Override
+    public RechargeResponse createRecharge(RechargeRequest request) {
+        validateUser(request.getUserId());
+        validatePlan(request.getPlanId());
+
+        PlanDto plan = fetchPlan(request.getPlanId());
+        UserDto user = fetchUser(request.getUserId());
+
+        Recharge recharge = new Recharge();
+        recharge.setUserId(request.getUserId());
+        recharge.setPlanId(request.getPlanId());
+
+        // Fix: Use current date-time if null
+        if (request.getRechargeDate() != null) {
+            recharge.setRechargeDate(request.getRechargeDate().atStartOfDay());
+        } else {
+            recharge.setRechargeDate(java.time.LocalDateTime.now());
+        }
+
+        recharge.setAmount(plan.getPrice());
+
+        Recharge saved = rechargeRepository.save(recharge);
+
+        return new RechargeResponse(
+            saved.getId(),
+            saved.getUserId(),
+            saved.getPlanId(),
+            saved.getRechargeDate(),
+            user,
+            plan
+        );
+    }
+}

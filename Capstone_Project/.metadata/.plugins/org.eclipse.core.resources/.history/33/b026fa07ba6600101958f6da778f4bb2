@@ -1,0 +1,24 @@
+package com.example.demo.entity;
+
+import java.time.LocalDateTime;
+
+@Entity
+public class Bill {
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
+	private Long userId;
+	private Long planId;
+	private double callCharge;
+	private double dataCharge;
+	private double smsCharge;
+	private double totalCharge;
+	private LocalDateTime generatedAt;
+	private String status;
+
+	public Bill() {
+	}
+	// Getters and setters (standard)
+	// ....(omitted for brevity; add all)
+}

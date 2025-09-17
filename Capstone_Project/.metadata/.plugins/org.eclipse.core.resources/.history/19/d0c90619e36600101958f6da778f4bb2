@@ -1,0 +1,52 @@
+package com.example.demo.controller;
+
+package com.example.demo;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class BillingControllerIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Test
+    @WithMockUser(roles = {"ADMIN"})
+    void generateBill_adminAllowed() throws Exception {
+        mockMvc.perform(post("/billing/generate/1"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = {"CUSTOMER"})
+    void generateBill_customerForbidden() throws Exception {
+        mockMvc.perform(post("/billing/generate/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = {"ADMIN"})
+    void getBillHistory_withValidationError() throws Exception {
+        mockMvc.perform(get("/billing/history?userId=0"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser(roles = {"CUSTOMER"})
+    void getBillById_validId() throws Exception {
+        mockMvc.perform(get("/billing/1"))
+                .andExpect(status().isOk());
+    }
+
+    // Add further tests for all critical flows and expected errors
+}
+

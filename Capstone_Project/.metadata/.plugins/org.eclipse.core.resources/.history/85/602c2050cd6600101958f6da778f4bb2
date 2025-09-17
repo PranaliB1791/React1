@@ -1,0 +1,53 @@
+package com.example.demo.controller;
+
+import com.example.demo.dto.BillResponse;
+import com.example.demo.service.BillingService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/billing")
+public class BillingController {
+
+	@Autowired
+	private BillingService billingService;
+
+	// Only ADMIN can generate a bill
+	@PreAuthorize("hasRole('ADMIN')")
+	@PostMapping("/generate/{userId}")
+	public BillResponse generateBill(@PathVariable Long userId) {
+		return billingService.generateBillForUser(userId);
+	}
+
+	// ADMIN and USER can view their own bill history
+	@PreAuthorize("hasAnyRole('ADMIN','USER')")
+	@GetMapping("/history")
+	public List<BillResponse> getBillHistory(@RequestParam Long userId) {
+		return billingService.getBillsForUser(userId);
+	}
+
+	// ADMIN and USER can view a specific bill
+	@PreAuthorize("hasAnyRole('ADMIN','USER')")
+	@GetMapping("/{billId}")
+	public BillResponse getBillById(@PathVariable Long billId) {
+		return billingService.getBillById(billId);
+	}
+
+	// ADMIN can view all bills
+	@PreAuthorize("hasRole('ADMIN')")
+	@GetMapping("/all")
+	public List<BillResponse> getAllBills() {
+		return billingService.getAllBills();
+	}
+
+	// ADMIN can delete a bill
+	@PreAuthorize("hasRole('ADMIN')")
+	@DeleteMapping("/{billId}")
+	public String deleteBill(@PathVariable Long billId) {
+		billingService.deleteBill(billId);
+		return "Bill deleted successfully";
+	}
+}

@@ -1,0 +1,43 @@
+package com.example.recharge.dto;
+
+import java.time.LocalDate;
+
+public class RechargeResponse {
+    private Long rechargeId;
+    private LocalDate rechargeDate;
+    private UserDto user;
+    private PlanDto plan;
+
+    // Getters and Setters
+    public Long getRechargeId() {
+        return rechargeId;
+    }
+
+    public void setRechargeId(Long rechargeId) {
+        this.rechargeId = rechargeId;
+    }
+
+    public LocalDate getRechargeDate() {
+        return rechargeDate;
+    }
+
+    public void setRechargeDate(LocalDate rechargeDate) {
+        this.rechargeDate = rechargeDate;
+    }
+
+    public UserDto getUser() {
+        return user;
+    }
+
+    public void setUser(UserDto user) {
+        this.user = user;
+    }
+
+    public PlanDto getPlan() {
+        return plan;
+    }
+
+    public void setPlan(PlanDto plan) {
+        this.plan = plan;
+    }
+}

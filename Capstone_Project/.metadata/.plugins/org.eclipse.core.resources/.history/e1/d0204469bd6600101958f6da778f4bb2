@@ -1,0 +1,57 @@
+package com.example.demo.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.example.demo.dto.BillResponse;
+import com.example.demo.entity.Bill;
+import com.example.demo.repository.BillRepository;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.time.LocalDateTime;
+
+@Service
+public class BillingServiceImpl implements BillingService {
+
+	@Autowired
+	private BillRepository billRepository;
+
+	@Override
+	public BillResponse generateBillForUser(Long userId) {
+		// Example: Just static for starting; replace with REST calls
+		double callUsage = 100, dataUsage = 1.5, smsUsage = 15;
+		double callCharge = callUsage * 0.5, dataCharge = dataUsage * 10, smsCharge = smsUsage * 0.25;
+		double totalCharge = callCharge + dataCharge + smsCharge;
+
+		Bill bill = new Bill();
+		bill.setUserId(userId);
+		bill.setPlanId(2L);
+		bill.setCallCharge(callCharge);
+		bill.setDataCharge(dataCharge);
+		bill.setSmsCharge(smsCharge);
+		bill.setTotalCharge(totalCharge);
+		bill.setGeneratedAt(LocalDateTime.now());
+		bill.setStatus("UNPAID");
+
+		bill = billRepository.save(bill);
+
+		// Simulate notification observer
+		System.out.println("[NOTIFY] Bill generated for userId " + userId);
+		return mapToResponse(bill);
+	}
+
+	private BillResponse mapToResponse(Bill b) {
+		// fill out
+		return new BillResponse(/* fill with all fields */);
+	}
+
+	@Override
+	public List<BillResponse> getBillsForUser(Long userId) {
+		List<Bill> bills = billRepository.findByUserId(userId);
+		List<BillResponse> responses = new ArrayList<>();
+		for (Bill b : bills)
+			responses.add(mapToResponse(b));
+		return responses;
+	}
+}

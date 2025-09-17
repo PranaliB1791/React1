@@ -1,0 +1,21 @@
+package com.example.demo.strategy;
+
+public class BillingStrategyFactory {
+
+    // Changed argument type to String planType for null-safe processing
+    public static BillingStrategy getStrategy(String planType) {
+        if (planType == null) {
+            planType = "PREPAID"; // Provide default plan type or "DEFAULT"
+        }
+
+        switch (planType.toUpperCase()) {
+            case "POSTPAID":
+                return new PostpaidBillingStrategy();
+            case "DATA_ONLY":
+                return new DataOnlyBillingStrategy();
+            case "PREPAID":
+            default:
+                return new PrepaidBillingStrategy();
+        }
+    }
+}

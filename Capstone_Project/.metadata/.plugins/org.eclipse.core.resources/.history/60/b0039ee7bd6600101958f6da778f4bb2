@@ -1,0 +1,21 @@
+package com.example.demo.service;
+
+package com.example.demo.service;
+
+import com.example.demo.dto.PlanResponse;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.beans.factory.annotation.Value;
+
+@Service
+public class PlanClient {
+
+	@Value("${plan.service.url:http://localhost:9003}")
+	private String planServiceUrl;
+
+	public PlanResponse getPlanById(Long planId) {
+		RestTemplate restTemplate = new RestTemplate();
+		String url = planServiceUrl + "/plans/" + planId; // Adjust according to your endpoint
+		return restTemplate.getForObject(url, PlanResponse.class);
+	}
+}

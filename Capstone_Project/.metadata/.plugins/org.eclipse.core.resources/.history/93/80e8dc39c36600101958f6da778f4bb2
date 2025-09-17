@@ -1,0 +1,32 @@
+package com.example.demo.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import com.example.demo.dto.BillResponse;
+import com.example.demo.service.BillingService;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/billing")
+public class BillingController {
+
+    @Autowired
+    private BillingService billingService;
+
+    // Only users with ROLE_ADMIN can generate a bill
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/generate/{userId}")
+    public BillResponse generateBill(@PathVariable Long userId) {
+        return billingService.generateBillForUser(userId);
+    }
+
+    // Both ADMIN and USER roles can view bill history
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @GetMapping("/history")
+    public List<BillResponse> getBillHistory(@RequestParam Long userId) {
+        return billingService.getBillsForUser(userId);
+    }
+}

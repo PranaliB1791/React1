@@ -1,0 +1,116 @@
+package com.example.demo.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.example.demo.dto.BillResponse;
+import com.example.demo.dto.UsageResponse;
+import com.example.demo.dto.PlanResponse;
+import com.example.demo.entity.Bill;
+import com.example.demo.repository.BillRepository;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class BillingServiceImpl implements BillingService {
+
+    @Autowired
+    private BillRepository billRepository;
+
+    @Autowired
+    private UsageClient usageClient; // Fetches usage logs from usage-service
+
+    @Autowired
+    private PlanClient planClient;   // Fetches plan details from plan-service
+
+    @Override
+    public BillResponse generateBillForUser(Long userId) {
+        // 1. Fetch usage logs for the user from UsageService
+        List<UsageResponse> usageList = usageClient.getUsageForUser(userId);
+
+        double totalCallMinutes = 0;
+        double totalDataGB = 0;
+        int totalSmsCount = 0;
+        Long planId = null;
+
+        // 2. Aggregate usage from usage records
+        for (UsageResponse usage : usageList) {
+            totalCallMinutes += usage.getCallMinutes();
+            totalDataGB += usage.getDataUsageInGB();
+            totalSmsCount += usage.getSmsCount();
+            if (planId == null) planId = usage.getPlanId();
+        }
+
+        // 3. Fetch plan details from PlanService using planId
+        double callRate = 0.5;
+        double dataRate = 10.0;
+        double smsRate = 0.25;
+        String planType = "DEFAULT";
+        if (planId != null) {
+            PlanResponse plan = planClient.getPlanById(planId);
+            // Example logic: set rates based on plan type (customize as needed)
+            if (plan != null && plan.getType() != null) {
+                planType = plan.getType();
+                if ("POSTPAID".equalsIgnoreCase(planType)) {
+                    callRate = 0.3;
+                    dataRate = 8.0;
+                    smsRate = 0.15;
+                } else if ("DATA_ONLY".equalsIgnoreCase(planType)) {
+                    callRate = 0.0;
+                    dataRate = 9.0;
+                    smsRate = 0.2;
+                }
+            }
+        }
+
+        // 4. Calculate charges based on aggregated usage and plan rates
+        double callCharge = totalCallMinutes * callRate;
+        double dataCharge = totalDataGB * dataRate;
+        double smsCharge = totalSmsCount * smsRate;
+        double totalCharge = callCharge + dataCharge + smsCharge;
+
+        // 5. Create and save the Bill
+        Bill bill = new Bill();
+        bill.setUserId(userId);
+        bill.setPlanId(planId);
+        bill.setCallCharge(callCharge);
+        bill.setDataCharge(dataCharge);
+        bill.setSmsCharge(smsCharge);
+        bill.setTotalCharge(totalCharge);
+        bill.setGeneratedAt(LocalDateTime.now());
+        bill.setStatus("UNPAID");
+
+        bill = billRepository.save(bill);
+
+        // 6. Simulate notification observer
+        System.out.println("[NOTIFY] Bill generated for userId " + userId + " | PlanType: " + planType);
+
+        return mapToResponse(bill);
+    }
+
+    private BillResponse mapToResponse(Bill b) {
+        BillResponse res = new BillResponse();
+        res.setId(b.getId());
+        res.setUserId(b.getUserId());
+        res.setPlanId(b.getPlanId());
+        res.setCallCharge(b.getCallCharge());
+        res.setDataCharge(b.getDataCharge());
+        res.setSmsCharge(b.getSmsCharge());
+        res.setTotalCharge(b.getTotalCharge());
+        res.setGeneratedAt(b.getGeneratedAt());
+        res.setStatus(b.getStatus());
+        return res;
+    }
+
+    @Override
+    public List<BillResponse> getBillsForUser(Long userId) {
+        List<Bill> bills = billRepository.findByUserId(userId);
+        List<BillResponse> responses = new ArrayList<>();
+        for (Bill b : bills) {
+            responses.add(mapToResponse(b));
+        }
+        return responses;
+    }
+}
